@@ -27,6 +27,8 @@ builder.Services.AddDbContext<ContextDb>(options =>
 {
     options.UseMySql(builder.Configuration.GetConnectionString("MySQL"), serverVersion);
 });
+
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthentication(opt =>
@@ -60,6 +62,15 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, SameUserHandler>();
 
 var app = builder.Build();
+
+if (args.Contains("migrate"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ContextDb>();
+    db.Database.Migrate();
+    return;
+}
+
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 
 // Configure the HTTP request pipeline.
@@ -72,7 +83,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseHsts();
-app.UseHttpsRedirection();
 
 app.MapNotificationEndpoints();
 

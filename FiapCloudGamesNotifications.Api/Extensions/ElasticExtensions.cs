@@ -1,4 +1,5 @@
-﻿using Elastic.Channels;
+﻿using Elastic.Apm.SerilogEnricher;
+using Elastic.Channels;
 using Elastic.CommonSchema.Serilog;
 using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
@@ -20,6 +21,7 @@ public static class ElasticExtensions
                 .Enrich.WithEnvironmentName()
                 .Enrich.WithCorrelationId()
                 .Enrich.WithMachineName()
+                .Enrich.WithElasticApmCorrelationInfo()
                 .Enrich.WithProperty("Application", builder.Environment.ApplicationName)
                 .WriteTo.Console() 
                 .WriteTo.Elasticsearch([new Uri(builder.Configuration["ElasticSearch:Uri"])], opts =>
@@ -36,6 +38,8 @@ public static class ElasticExtensions
                     transport.Authentication(new ApiKey(builder.Configuration["ElasticSearch:ApiKey"]));
                 });
         });
+
+        builder.Services.AddAllElasticApm();
 
         return builder;
     }

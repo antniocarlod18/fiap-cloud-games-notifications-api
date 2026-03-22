@@ -1,4 +1,5 @@
 ﻿using FiapCloudGamesNotifications.Api.Consumers;
+using FiapCloudGamesNotifications.Api.Filters;
 using MassTransit;
 using Microsoft.AspNetCore.Builder;
 
@@ -14,6 +15,11 @@ public static class MassTransitExtensions
 
             x.UsingRabbitMq((context, cfg) =>
             {
+                cfg.UseSendFilter(typeof(TracingSendFilter<>), context);
+                cfg.UsePublishFilter(typeof(TracingPublishFilter<>), context);
+
+                cfg.UseConsumeFilter(typeof(TracingConsumeFilter<>), context);
+
                 cfg.Host(builder.Configuration["RabbitMQ:Host"], builder.Configuration["RabbitMQ:VirtualHost"], h =>
                 {
                     h.Username(builder.Configuration["RabbitMQ:UserName"]);

@@ -2,6 +2,8 @@
 using FiapCloudGamesNotifications.Application.Services.Interfaces;
 using FiapCloudGamesNotifications.Domain.Entities;
 using FiapCloudGamesNotifications.Domain.Repositories;
+using MassTransit;
+using MassTransit.Transports;
 using Microsoft.Extensions.Logging;
 
 namespace FiapCloudGamesNotifications.Application.Services
@@ -10,14 +12,16 @@ namespace FiapCloudGamesNotifications.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<NotificationService> _logger;
+        private readonly ISendEndpointProvider _sendEndpointProvider;
 
-        public NotificationService(IUnitOfWork unitOfWork, ILogger<NotificationService> logger)
+        public NotificationService(IUnitOfWork unitOfWork, ILogger<NotificationService> logger, ISendEndpointProvider sendEndpointProvider)
         {
             this._unitOfWork = unitOfWork;
             this._logger = logger;
+            _sendEndpointProvider = sendEndpointProvider;
         }
 
-        public async Task SendNotificationAsync(Guid userId, string title, string message, string? email=null)
+        public async Task SendNotificationAsync(Guid userId, string title, string message, string? email = null)
         {
             _logger.LogInformation("Preparing to send notification to user {UserId} with title \"{Title}\".", userId, title);
 
@@ -34,8 +38,10 @@ namespace FiapCloudGamesNotifications.Application.Services
 
             var notification = new Notification(userId, title, message, email);
 
-            _logger.LogInformation("Sending notification to {Email} identified by {UserId} with title \"{Title}\": {Message}", 
+            _logger.LogInformation("Sending notification to {Email} identified by {UserId} with title \"{Title}\": {Message}",
                 email, userId, title, message);
+
+            await SendNotificationToEmailAsync(notification);
 
             await _unitOfWork.NotificationsRepo.AddAsync(notification);
 
@@ -56,6 +62,20 @@ namespace FiapCloudGamesNotifications.Application.Services
 
             _logger.LogInformation("Retrieved {Count} notifications", listOfNotifications.Count);
             return listOfNotifications.Select(x => (NotificationResponse?)x).ToList();
+        }
+
+        public async Task SendNotificationToEmailAsync(Notification notification)
+        {
+            var endpoint = await _sendEndpointProvider.GetSendEndpoint(
+                new Uri("queue:notification-queue")
+            );
+
+            await endpoint.Send(new
+            {
+                notification.Email,
+                notification.Title,
+                notification.Message
+            });
         }
     }
 }
