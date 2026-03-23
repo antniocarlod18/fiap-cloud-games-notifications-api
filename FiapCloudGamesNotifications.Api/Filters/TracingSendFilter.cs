@@ -9,12 +9,15 @@ public class TracingSendFilter<T> : IFilter<SendContext<T>> where T : class
 {
     public async Task Send(SendContext<T> context, IPipe<SendContext<T>> next)
     {
-        var tracer = Agent.Tracer;
-        var currentTransaction = tracer.CurrentTransaction;
+        var transaction = Agent.Tracer.CurrentTransaction;
 
-        if (currentTransaction != null)
+        if (transaction != null)
         {
-            context.Headers.Set("trace-id", currentTransaction.TraceId);
+            var traceparent = transaction
+                .OutgoingDistributedTracingData
+                .SerializeToString();
+
+            context.Headers.Set("traceparent", traceparent);
         }
 
         await next.Send(context);

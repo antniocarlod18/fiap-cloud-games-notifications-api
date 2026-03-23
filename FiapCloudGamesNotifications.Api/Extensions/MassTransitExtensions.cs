@@ -28,6 +28,7 @@ public static class MassTransitExtensions
 
                 cfg.UseMessageRetry(r => r.Immediate(2));
                 cfg.ConfigureEndpoints(context);
+                cfg.ReceiveEndpoint("notification-queue", e => { });
             });
 
             x.AddConsumer<CreateUserProfileConsumer>();
