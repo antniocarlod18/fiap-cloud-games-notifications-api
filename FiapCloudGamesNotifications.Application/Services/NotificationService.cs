@@ -1,25 +1,31 @@
-﻿using FiapCloudGamesNotifications.Application.Dtos;
+﻿using Azure.Messaging.ServiceBus;
+using FiapCloudGamesNotifications.Application.Dtos;
 using FiapCloudGamesNotifications.Application.Services.Interfaces;
 using FiapCloudGamesNotifications.Domain.Entities;
 using FiapCloudGamesNotifications.Domain.Repositories;
 using MassTransit;
 using MassTransit.Transports;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FiapCloudGamesNotifications.Application.Services
 {
     public class NotificationService : INotificationService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ServiceBusSender _sender;
         private readonly ILogger<NotificationService> _logger;
-        private readonly ISendEndpointProvider _sendEndpointProvider;
 
-        public NotificationService(IUnitOfWork unitOfWork, ILogger<NotificationService> logger, ISendEndpointProvider sendEndpointProvider)
+        public NotificationService(IUnitOfWork unitOfWork, ILogger<NotificationService> logger, IConfiguration configuration)
         {
             this._unitOfWork = unitOfWork;
             this._logger = logger;
-            _sendEndpointProvider = sendEndpointProvider;
+            var client = new ServiceBusClient(configuration["ServiceBus:ConnectionString"]);
+            this._sender = client.CreateSender(configuration["ServiceBus:QueueName"]);
         }
+
 
         public async Task SendNotificationAsync(Guid userId, string title, string message, string? email = null)
         {
@@ -66,16 +72,29 @@ namespace FiapCloudGamesNotifications.Application.Services
 
         public async Task SendNotificationToEmailAsync(Notification notification)
         {
-            var endpoint = await _sendEndpointProvider.GetSendEndpoint(
-                new Uri("queue:notification-queue")
-            );
-
-            await endpoint.Send(new
+            var json = JsonSerializer.Serialize(new NotificationMessage
             {
-                notification.Email,
-                notification.Title,
-                notification.Message
+                Email=notification.Email,
+                Title = notification.Title,
+                Message = notification.Message
             });
+
+            var message = new ServiceBusMessage(json);
+
+            await _sender.SendMessageAsync(message);
+            _logger.LogInformation("Sent NotificationMessage to Azure Service Bus queue 'notification-queue' for UserId: {UserId}", notification.UserId);
         }
+    }
+
+    public class NotificationMessage
+    {
+        [JsonPropertyName("email")]
+        public string Email { get; set; } = string.Empty;
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = string.Empty;
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
     }
 }
