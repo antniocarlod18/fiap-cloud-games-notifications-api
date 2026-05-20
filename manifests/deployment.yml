@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: antniocarlodfiapcloudgamesnotificationsapi 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: antniocarlodfiapcloudgamesnotificationsapi
+  template:
+    metadata:
+      labels:
+        app: antniocarlodfiapcloudgamesnotificationsapi 
+    spec:
+      containers:
+        - name: antniocarlodfiapcloudgamesnotificationsapi 
+          image: fgcacr13245.azurecr.io/antniocarlodfiapcloudgamesnotificationsapi
+          ports:
+          - containerPort: 8080
