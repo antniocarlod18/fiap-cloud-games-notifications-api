@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notifications-migration
+spec:
+  ttlSecondsAfterFinished: 60
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+        - name: migration
+          image: fgcacr13245.azurecr.io/antniocarlodfiapcloudgamesnotificationsapi:$(tag)
+          command: ["dotnet", "FiapCloudGamesNotifications.Api.dll", "migrate"]
+          envFrom:
+            - configMapRef:
+                name: notifications-api-config
+            - secretRef:
+                name: notifications-api-secrets  
+      restartPolicy: Never

@@ -22,8 +22,8 @@ namespace FiapCloudGamesNotifications.Application.Services
         {
             this._unitOfWork = unitOfWork;
             this._logger = logger;
-            var client = new ServiceBusClient(configuration["ServiceBus:ConnectionString"]);
-            this._sender = client.CreateSender(configuration["ServiceBus:QueueName"]);
+            var client = new ServiceBusClient(configuration["AzureServiceBus:ConnectionString"]);
+            this._sender = client.CreateSender(configuration["AzureServiceBus:QueueName"]);
         }
 
 
